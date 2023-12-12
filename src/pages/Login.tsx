@@ -64,7 +64,7 @@ export default function Login() {
           alt="Logo"
           className="object-cover ml-5 mb-6"
         />
-        <h1 className=" mb-6 text-2xl font-semibold dark:text-white text-start ml-5 font-sans">
+        <h1 className="mb-6 text-2xl font-semibold dark:text-white text-start ml-5 font-sans">
           Welcome Admin BCR
         </h1>
         <div className="mb-4 ml-5">

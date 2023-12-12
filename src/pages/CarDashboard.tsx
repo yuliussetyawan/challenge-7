@@ -1,81 +1,129 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
+import Sidebar from "../components/Sidebar";
 import Sidenav from "../components/Sidenav";
+import Notification from "../components/Notification";
+import moment from "moment";
 
+const cars_api: string = "http://localhost:3001";
 
 interface UserResponse {
   id: number;
-  username: string;
+  name: string;
   email: string;
+  profile_picture_file?: string;
+  password: string;
+  role?: string;
 }
 
 interface CarResponse {
   id: number;
   car_name: string;
+  car_rent_price: number;
   car_categories: string;
   car_size: string;
-  status_rental: string;
-  car_img: string;
+  car_img?: string;
   created_by: UserResponse;
-  create_at?: Date;
+  updated_by: UserResponse;
+  deleted_by: UserResponse;
+  created_at?: Date;
+  updated_at?: Date;
+  delete_at?: Date;
 }
-
-const cars_api: string = "http://localhost:3001";
 
 export default function DashBoardForm() {
   const [cars, setCars] = useState([]);
+  const [carDelete, setDeleteCar] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [showNotification, setShowNotification] = useState(false);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
+  // load first
   useEffect(() => {
-    // load for the first time
     const fetchCars = async () => {
       const response = await fetch(cars_api + "/api/cars");
-      const responseJSON = await response.json();
-      // console.log("response", responseJSON);
-      setCars(responseJSON.data.cars);
+      const resonseJson = await response.json();
+
+      setCars(resonseJson.data.cars);
     };
+
 
     const checkIsLoggedIn = () => {
       const accessToken = localStorage.getItem("access_token");
-      if (accessToken) setIsLoggedIn(true);
-      else setIsLoggedIn(false);
+
+      if (accessToken) {
+        setIsLoggedIn(true);
+      } else {
+        setIsLoggedIn(false);
+      }
     };
     fetchCars();
     checkIsLoggedIn();
   }, []);
 
-  const deleteHandler = async (carId: any) => {
+
+  const handleConfirmation = async (confirmed: boolean) => {
+    setShowNotification(false);
+
+    if (confirmed) {
+      try {
+        const accessToken = localStorage.getItem("access_token");
+
+        if (!accessToken) {
+          console.error("User not logged in");
+          return;
+        }
+        const response = await fetch(cars_api + "/api/cars/" + carDelete, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        if (response.ok) {
+          setCars((prevCars) =>
+            prevCars.filter((car: CarResponse) => car.id !== carDelete)
+          );
+        } else {
+          console.log("Delete car failed: ", response.statusText);
+        }
+      } catch (error: any) {
+        console.log("There is a problem when deleting car: ", error.message);
+      }
+    }
+  };
+
+
+  const deleteCar = async (carId: any) => {
     try {
       const accessToken = localStorage.getItem("access_token");
 
       if (!accessToken) {
-        // Handle the case when the user is not logged in
-        console.error("User not logged in");
+        console.log("Please login first!");
         return;
       }
+      setDeleteCar(carId);
+      setShowNotification(true);
     } catch (error: any) {
       console.error("Error deleting car:", error.message);
     }
   };
 
+
   const logoutHandler = () => {
     localStorage.removeItem("access_token");
     localStorage.removeItem("email");
-
     setIsLoggedIn(false);
   };
 
   return (
     <div className="flex  min-h-fit">
       <Sidenav />
-
       <div className={`flex flex-col w-full  ${isSidebarOpen}`}>
         <Navbar
           onSidebarToggle={toggleSidebar}
@@ -102,37 +150,28 @@ export default function DashBoardForm() {
                           scope="col"
                           className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                         >
-                          Size
+                          Category
                         </th>
                         <th
                           scope="col"
                           className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                         >
-                          Categories
+                          price
                         </th>
                         <th
                           scope="col"
                           className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                         >
-                          Status Rental
+                          CreateAt
                         </th>
                         <th
                           scope="col"
                           className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                         >
-                          Create by
+                          UpdateAt
                         </th>
-                        <th
-                          scope="col"
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                        >
-                          Edit
-                        </th>
-                        <th
-                          scope="col"
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                        >
-                          Delete
+                        <th scope="col" className="relative px-6 py-3">
+                          <span className="sr-only">Edit</span>
                         </th>
                       </tr>
                     </thead>
@@ -161,7 +200,7 @@ export default function DashBoardForm() {
                             <div className="flex items-left">
                               <div>
                                 <div className="text-sm font-medium text-gray-900">
-                                  {car.car_categories}
+                                  {car.car_rent_price}
                                 </div>
                               </div>
                             </div>
@@ -170,7 +209,9 @@ export default function DashBoardForm() {
                             <div className="flex items-left">
                               <div>
                                 <div className="text-sm font-medium text-gray-900">
-                                  {car.status_rental}
+                                  {moment(car.created_at).format(
+                                    "DD/MM/YYYY HH:mm:ss a"
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -179,7 +220,9 @@ export default function DashBoardForm() {
                             <div className="flex items-left">
                               <div>
                                 <div className="text-sm font-medium text-gray-900">
-                                  {car.created_by.username}
+                                  {moment(car.updated_at).format(
+                                    "DD/MM/YYYY HH:mm:ss a"
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -193,11 +236,9 @@ export default function DashBoardForm() {
                                 Edit
                               </Link>
                             </button>
-                          </td>
-                          <td className="px-6 py-4 text-sm font-medium text-right whitespace-nowrap">
                             <button
                               className="text-red-500 hover:text-red-700"
-                              onClick={() => deleteHandler(car.id)}
+                              onClick={() => deleteCar(car.id)}
                             >
                               Delete
                             </button>
@@ -211,6 +252,13 @@ export default function DashBoardForm() {
             </div>
           </div>
         </div>
+
+        {showNotification && (
+          <Notification
+            onConfirm={() => handleConfirmation(true)}
+            onCancel={() => handleConfirmation(false)}
+          />
+        )}
       </div>
     </div>
   );
